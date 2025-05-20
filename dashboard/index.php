@@ -121,21 +121,23 @@ require_once "header.php";
 
     <!-- end crossword -->
 
-
     <div class="col-md-8">
-
 
       <h5 style="padding-left: 20px;">Question of the day:</h5>
       <?php
-      $streak_query = mysqli_query($conn, "SELECT last_date, streak_count FROM daily_streak WHERE email='$email'");
-
+      // Fetch streak info
+      $streak_query = mysqli_query($conn, "SELECT last_date, streak_count, first_name FROM daily_streak WHERE email='$email'");
       $streak = 0;
       $today = date("Y-m-d");
       $yesterday = date("Y-m-d", strtotime("yesterday"));
+      $has_answered_today = false;
+
       if ($streak_query->num_rows == 1) {
         $streak_assoc = mysqli_fetch_assoc($streak_query);
         $streak = $streak_assoc['streak_count'];
-        if ($streak_assoc['last_date'] !== $yesterday and $streak_assoc['last_date'] !== $today) {
+        if ($streak_assoc['last_date'] === $today) {
+          $has_answered_today = true;
+        } elseif ($streak_assoc['last_date'] !== $yesterday) {
           mysqli_query($conn, "UPDATE daily_streak SET streak_count=0 WHERE email='$email'");
           $streak = 0;
         }
@@ -151,141 +153,178 @@ require_once "header.php";
           </div>
 
           <div class="streak-right">
-            <div class="streak-top">TOP</div>
+            <div class="streak-top">TOP STREAK MEMBERS</div>
             <div class="streak-avatar-row">
-
               <?php
-
               $day_before = date("Y-m-d", strtotime("-2 days"));
-              $streak_board = mysqli_query($conn, "SELECT * FROM daily_streak WHERE last_date>'$day_before' ORDER BY streak_count LIMIT 0,4");
-
+              $streak_board = mysqli_query($conn, "SELECT * FROM daily_streak WHERE last_date>'$day_before' ORDER BY streak_count DESC, last_date DESC LIMIT 0,4");
+              $rank_icons = [
+                1 => "<span title='1st' style='font-size:32px;color:#FFD700;'>&#x1F451;</span>", // gold crown
+                2 => "<span title='2nd' style='font-size:32px;color:#C0C0C0;'>&#x1F948;</span>", // silver medal
+                3 => "<span title='3rd' style='font-size:32px;color:#CD7F32;'>&#x1F949;</span>", // bronze medal
+                4 => "<span title='4th' style='font-size:32px;color:#b0b0b0;'>&#x1F3C5;</span>", // generic medal
+              ];
+              $rank = 1;
               while ($x = mysqli_fetch_assoc($streak_board)) {
               ?>
-                <div class="streak-profile">
-                  <div class="streak-avatar"></div>
-                  <div><?php echo $x['streak_count']; ?></div>
-                  <div><?php echo $x['first_name']; ?></div>
+                <div class="streak-profile" style="text-align:center;">
+                  <div>
+                    <?php echo isset($rank_icons[$rank]) ? $rank_icons[$rank] : ""; ?>
+                  </div>
+                  <br>
+                  <div>
+                    <?php echo $x['streak_count']; ?>
+                  </div>
+                  <div style="font-size:12px;"><?php echo htmlspecialchars($x['first_name']); ?></div>
                 </div>
-              <?php } ?>
-
+              <?php $rank++;
+              } ?>
             </div>
           </div>
-
         </div>
 
         <br>
         <div style="font-size: 12px;font-weight: bolder;">Answer questions daily to maintain your streak!</div>
-
         <br>
-
-        <div id="question" style=""></div>
-        <br>
-
-        <label style="width:100%" for="option-a-input">
-          <div class="option">
-            <input id="option-a-input" type="radio" name="answer" value="A">
-            <span id="option-a"></span>
-          </div>
-        </label>
-
-        <label style="width:100%" for="option-b-input">
-          <div class="option">
-            <input id="option-b-input" type="radio" name="answer" value="B">
-            <span id="option-b"></span>
-          </div>
-        </label>
-
-        <label style="width:100%" for="option-c-input">
-          <div class="option">
-            <input id="option-c-input" type="radio" name="answer" value="C">
-            <span id="option-c"></span>
-          </div>
-        </label>
-
-        <label style="width:100%" for="option-d-input">
-          <div class="option">
-            <input id="option-d-input" type="radio" name="answer" value="D">
-            <span id="option-d"></span>
-          </div>
-        </label>
-
-        <label style="width:100%" for="option-e-input">
-          <div class="option">
-            <input id="option-e-input" type="radio" name="answer" value="E">
-            <span id="option-e"></span>
-          </div>
-        </label>
-
-        <div class="clear"></div>
-        <br>
-        <button id="submit-answer" class="main-search-btn">Check Answer</button>
-
-        <div class="alert alert-light" id="answer" style="margin-top:20px;display: none;">
-          <div id="answer-feedback" style="">Select an option</div>
+        <script>
+          // Countdown to next midnight
+          function updateCountdown(textdesc) {
+            var now = new Date();
+            var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            var diff = tomorrow - now;
+            var hours = Math.floor(diff / (1000 * 60 * 60));
+            var mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            var secs = Math.floor((diff % (1000 * 60)) / 1000);
+            document.getElementById('next-question-countdown').textContent =
+              textdesc +
+              (hours < 10 ? "0" : "") + hours + ":" +
+              (mins < 10 ? "0" : "") + mins + ":" +
+              (secs < 10 ? "0" : "") + secs;
+          }
+        </script>
+        <div class="alert alert-success" style="text-align:center;">
+          <strong>You've already answered today's question!</strong>
           <br>
-          <p id="explanation"></p>
+          <span id="next-question-countdown"></span>
         </div>
+        <?php if ($has_answered_today): ?>
+
+          <script>
+            nextcountdown = "Next question in: ";
+            updateCountdown(nextcountdown);
+            setInterval(function() { updateCountdown(nextcountdown); }, 1000);
+          </script>
+        <?php else: ?>
+          <script>
+            nextcountdown =  "Question resets in: ";
+            updateCountdown(nextcountdown);
+            setInterval(function() { updateCountdown(nextcountdown); }, 1000);
+          </script>
+
+          <div id="question" style=""></div>
+          <br>
+
+          <label style="width:100%" for="option-a-input">
+            <div class="option">
+              <input id="option-a-input" type="radio" name="answer" value="A">
+              <span id="option-a"></span>
+            </div>
+          </label>
+
+          <label style="width:100%" for="option-b-input">
+            <div class="option">
+              <input id="option-b-input" type="radio" name="answer" value="B">
+              <span id="option-b"></span>
+            </div>
+          </label>
+
+          <label style="width:100%" for="option-c-input">
+            <div class="option">
+              <input id="option-c-input" type="radio" name="answer" value="C">
+              <span id="option-c"></span>
+            </div>
+          </label>
+
+          <label style="width:100%" for="option-d-input">
+            <div class="option">
+              <input id="option-d-input" type="radio" name="answer" value="D">
+              <span id="option-d"></span>
+            </div>
+          </label>
+
+          <label style="width:100%" for="option-e-input">
+            <div class="option">
+              <input id="option-e-input" type="radio" name="answer" value="E">
+              <span id="option-e"></span>
+            </div>
+          </label>
+
+          <div class="clear"></div>
+          <br>
+          <button id="submit-answer" class="main-search-btn">Check Answer</button>
+
+          <div class="alert alert-light" id="answer" style="margin-top:20px;display: none;">
+            <div id="answer-feedback" style="">Select an option</div>
+            <br>
+            <p id="explanation"></p>
+          </div>
+
+          <script type="text/javascript">
+            // Fetch the question data from the PHP server
+            fetch('page-loader/mcq')
+              .then(response => response.json())
+              .then(questionData => {
+                // Populate the HTML elements with question and options
+                document.getElementById("question").textContent = questionData.question;
+                document.getElementById("option-a").textContent = "A. " + questionData.options.A;
+                document.getElementById("option-b").textContent = "B. " + questionData.options.B;
+                document.getElementById("option-c").textContent = "C. " + questionData.options.C;
+                document.getElementById("option-d").textContent = "D. " + questionData.options.D;
+                document.getElementById("option-e").textContent = "E. " + questionData.options.E;
+
+                // Add event listener to the "Submit Answer" button
+                document.getElementById("submit-answer").addEventListener("click", function() {
+                  var selectedRadio = document.querySelector("input[name='answer']:checked");
+                  if (!selectedRadio) {
+                    document.getElementById("answer-feedback").textContent = "Please select an option.";
+                    $("#answer").slideDown();
+                    return;
+                  }
+                  var selectedAnswer = selectedRadio.value;
+
+                  $.post("page-loader/mcq", {
+                    streak: selectedAnswer
+                  }, function(response) {
+                    document.getElementById('streakCount').innerHTML = response;
+
+                    $("#answer").slideDown();
+
+                    // Check if the selected answer is correct
+                    var isCorrect = (selectedAnswer === questionData.correctAnswer);
+
+                    // Display feedback and explanation
+                    document.getElementById("answer-feedback").textContent = isCorrect ? "Correct!" : "Incorrect! Answer: " + questionData.correctAnswer;
+                    document.getElementById("explanation").textContent = questionData.explanation;
+
+                    // Change color of selected option if the answer is incorrect
+                    if (!isCorrect) {
+                      var selectedOption = document.querySelector("label[for='option-" + selectedAnswer.toLowerCase() + "-input']");
+                      selectedOption.style.color = "red";
+                      var correctOption = document.querySelector("label[for='option-" + questionData.correctAnswer.toLowerCase() + "-input']");
+                      correctOption.style.fontWeight = "bolder";
+                      correctOption.style.color = "green";
+                    }
+                  });
+                });
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                // Handle error scenario
+              });
+          </script>
+        <?php endif; ?>
 
       </div>
-
-
-      <script type="text/javascript">
-        // Fetch the question data from the PHP server
-        fetch('page-loader/mcq')
-          .then(response => response.json())
-          .then(questionData => {
-            // Populate the HTML elements with question and options
-            document.getElementById("question").textContent = questionData.question;
-            document.getElementById("option-a").textContent = "A. " + questionData.options.A;
-            document.getElementById("option-b").textContent = "B. " + questionData.options.B;
-            document.getElementById("option-c").textContent = "C. " + questionData.options.C;
-            document.getElementById("option-d").textContent = "D. " + questionData.options.D;
-            document.getElementById("option-e").textContent = "E. " + questionData.options.E;
-
-            // Add event listener to the "Submit Answer" button
-            document.getElementById("submit-answer").addEventListener("click", function() {
-              var selectedAnswer = document.querySelector("input[name='answer']:checked").value;
-
-
-              $.post("page-loader/mcq", {
-                streak: selectedAnswer
-              }, function(response) {
-                console.log(response);
-                document.getElementById('streakCount').innerHTML = response;
-
-                $("#answer").slideDown();
-
-                // Check if the selected answer is correct
-                var isCorrect = (selectedAnswer === questionData.correctAnswer);
-
-                // Display feedback and explanation
-                document.getElementById("answer-feedback").textContent = isCorrect ? "Correct!" : "Incorrect! Answer: " + questionData.correctAnswer;
-                document.getElementById("explanation").textContent = questionData.explanation;
-
-                // Change color of selected option if the answer is incorrect
-                if (!isCorrect) {
-                  var selectedOption = document.querySelector("label[for='option-" + selectedAnswer.toLowerCase() + "-input']");
-                  selectedOption.style.color = "red";
-
-                  // document.querySelector("label[for='option-" + questionData.correctAnswer.toLowerCase() + "-input']").style.color = "green";
-                  document.querySelector("label[for='option-" + questionData.correctAnswer.toLowerCase() + "-input']").style.fontWeight = "bolder";
-                  document.querySelector("label[for='option-" + questionData.correctAnswer.toLowerCase() + "-input']").style.color = "green";
-                  // console.log(selectedOption);
-                }
-              });
-            });
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            // Handle error scenario
-          });
-      </script>
-
-
-
-
-
-
     </div>
 
 
