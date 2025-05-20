@@ -203,22 +203,24 @@ require_once "header.php";
           }
         </script>
         <div class="alert alert-success" style="text-align:center;">
-          <strong>You've already answered today's question!</strong>
-          <br>
-          <span id="next-question-countdown"></span>
+          <strong><span id="next-question-countdown"></span></strong>
         </div>
         <?php if ($has_answered_today): ?>
 
           <script>
             nextcountdown = "Next question in: ";
             updateCountdown(nextcountdown);
-            setInterval(function() { updateCountdown(nextcountdown); }, 1000);
+            setInterval(function() {
+              updateCountdown(nextcountdown);
+            }, 1000);
           </script>
         <?php else: ?>
           <script>
-            nextcountdown =  "Question resets in: ";
+            nextcountdown = "Question resets in: ";
             updateCountdown(nextcountdown);
-            setInterval(function() { updateCountdown(nextcountdown); }, 1000);
+            setInterval(function() {
+              updateCountdown(nextcountdown);
+            }, 1000);
           </script>
 
           <div id="question" style=""></div>
