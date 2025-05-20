@@ -124,7 +124,7 @@ require_once "header.php";
   <div class="col-md-8">
 
 
-  <!-- <h5 style="padding-left: 20px;">Question of the day:</h5> -->
+  <h5 style="padding-left: 20px;">Question of the day:</h5>
   <?php 
   $streak_query=mysqli_query($conn, "SELECT last_date, streak_count FROM daily_streak WHERE email='$email'");
 
@@ -143,7 +143,7 @@ require_once "header.php";
    ?>
   <div style="padding:20px">
 
-  <div class="your-streak-row" style="display:none">
+  <div class="your-streak-row">
     <div class="your-streak-box">
       <div class="your-streak-box-top">Your Streak</div>
       <div class="your-streak-box-number" id="streakCount"><?php echo $streak; ?></div>
@@ -384,12 +384,6 @@ fetch('page-loader/mcq')
 
     <br><br><br><br>
 </div>
-
-
-
-
-	</div>
-
 
 
 
